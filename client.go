@@ -14,13 +14,15 @@ import (
 )
 
 type Client struct {
-	accessKeyId     string
-	secretAccessKey string
-	region          string
-    ZoneType     string
-    RouterID     string
-    RouterRegion string
-	singer          *Signer
+    accessKeyId     string
+    secretAccessKey string
+    region          string
+    ZoneType        string
+    RouterID        string
+    RouterRegion    string
+    ProjectID       string
+    CloudProvider   string
+    singer          *Signer
 }
 
 // NewClient creates a new Huawei Cloud DNS client.
@@ -209,8 +211,22 @@ func (c *Client) getZoneId(ctx context.Context, zone string) (string, error) {
 }
 
 func (c *Client) getBaseURL() *neturl.URL {
-	baseURL, _ := neturl.Parse("https://dns." + c.region + ".myhuaweicloud.com/v2")
-	return baseURL
+    var baseURL *neturl.URL
+    if strings.Contains(c.region, "hc.sbercloud") || c.region == "ru-moscow-1" {
+        if c.ZoneType == "private" {
+            baseURL, _ = neturl.Parse("https://dns." + c.region + ".hc.sbercloud.ru/v2.1/" + c.ProjectID)
+        } else {
+            baseURL, _ = neturl.Parse("https://dns." + c.region + ".hc.sbercloud.ru/v2")
+        }
+    } else {
+        if c.ZoneType == "private" {
+            baseURL, _ = neturl.Parse("https://dns." + c.region + ".myhuaweicloud.com/v2.1/" + c.ProjectID)
+        } else {
+            baseURL, _ = neturl.Parse("https://dns." + c.region + ".myhuaweicloud.com/v2")
+        }
+    }
+
+    return baseURL
 }
 
 func (c *Client) doAPIRequest(req *http.Request, result any) error {

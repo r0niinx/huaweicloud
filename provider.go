@@ -10,19 +10,16 @@ import (
 
 // Provider facilitates DNS record manipulation with Huawei Cloud
 type Provider struct {
-	// AccessKeyId is required by the Huawei Cloud API for authentication.
-	AccessKeyId string `json:"access_key_id,omitempty"`
-	// SecretAccessKey is required by the Huawei Cloud API for authentication.
-	SecretAccessKey string `json:"secret_access_key,omitempty"`
-	// RegionId is optional and defaults to "cn-south-1".
-	RegionId string `json:"region_id,omitempty"`
-    ZoneType string `json:"zone_type,omitempty"`
-    RouterID string `json:"router_id,omitempty"`
-    RouterRegion string `json:"router_region,omitempty"`
-	// once is used to ensure the client is initialized only once.
-	once sync.Once
-	//  client is the Huawei Cloud DNS client.
-	client *Client
+    AccessKeyId     string `json:"access_key_id,omitempty"`
+    SecretAccessKey string `json:"secret_access_key,omitempty"`
+    RegionId        string `json:"region_id,omitempty"`
+    ProjectID       string `json:"project_id,omitempty"`
+    CloudProvider   string `json:"cloud_provider,omitempty"`
+    ZoneType        string `json:"zone_type,omitempty"`
+    RouterID        string `json:"router_id,omitempty"`
+    RouterRegion    string `json:"router_region,omitempty"`
+    once            sync.Once
+    client          *Client
 }
 
 func (p *Provider) init() {
