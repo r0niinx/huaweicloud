@@ -16,10 +16,32 @@ type Provider struct {
 	SecretAccessKey string `json:"secret_access_key,omitempty"`
 	// RegionId is optional and defaults to "cn-south-1".
 	RegionId string `json:"region_id,omitempty"`
+    ZoneType string `json:"zone_type,omitempty"`
+    RouterID string `json:"router_id,omitempty"`
+    RouterRegion string `json:"router_region,omitempty"`
 	// once is used to ensure the client is initialized only once.
 	once sync.Once
 	//  client is the Huawei Cloud DNS client.
 	client *Client
+}
+
+func (p *Provider) init() {
+    if p.ZoneType == "" {
+        p.ZoneType = getEnvOrDefault("HUAWEI_ZONE_TYPE", "public")
+    }
+    if p.RouterID == "" {
+        p.RouterID = os.Getenv("HUAWEI_ROUTER_ID")
+    }
+    if p.RouterRegion == "" {
+        p.RouterRegion = getEnvOrDefault("HUAWEI_ROUTER_REGION", p.Region)
+    }
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+    if val := os.Getenv(key); val != "" {
+        return val
+    }
+    return defaultValue
 }
 
 // GetRecords lists all the records in the zone.
@@ -42,7 +64,6 @@ func (p *Provider) GetRecords(ctx context.Context, zone string) ([]libdns.Record
 
 	return results, nil
 }
-
 // AppendRecords adds records to the zone. It returns the records that were added.
 // NOTE: This implementation is NOT atomic.
 func (p *Provider) AppendRecords(ctx context.Context, zone string, records []libdns.Record) ([]libdns.Record, error) {
@@ -144,13 +165,35 @@ func (p *Provider) DeleteRecords(ctx context.Context, zone string, records []lib
 
 // getClient initializes the client for the provider.
 func (p *Provider) getClient() *Client {
-	p.once.Do(func() {
-		if p.AccessKeyId == "" || p.SecretAccessKey == "" {
-			panic("huaweicloud: credentials missing")
-		}
-		p.client = NewClient(p.AccessKeyId, p.SecretAccessKey, p.RegionId)
-	})
-	return p.client
+    if p.client != nil {
+        return p.client
+    }
+
+    if p.ZoneType == "" {
+        p.ZoneType = getEnv("HUAWEI_ZONE_TYPE", "public")
+    }
+    if p.RouterID == "" {
+        p.RouterID = os.Getenv("HUAWEI_ROUTER_ID")
+    }
+    if p.RouterRegion == "" {
+        p.RouterRegion = getEnv("HUAWEI_ROUTER_REGION", p.Region)
+    }
+    p.client = &Client{
+        AccessKeyId:     p.AccessKeyId,
+        SecretAccessKey: p.SecretAccessKey,
+        Region:          p.Region,
+        ZoneType:        p.ZoneType,      // Передаем тип зоны
+        RouterID:        p.RouterID,      // Передаем VPC ID
+        RouterRegion:    p.RouterRegion,  // Передаем регион VPC
+    }
+    return p.client
+}
+
+func getEnv(key, defaultValue string) string {
+    if val := os.Getenv(key); val != "" {
+        return val
+    }
+    return defaultValue
 }
 
 // Interface guards

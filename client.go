@@ -17,6 +17,9 @@ type Client struct {
 	accessKeyId     string
 	secretAccessKey string
 	region          string
+    ZoneType     string
+    RouterID     string
+    RouterRegion string
 	singer          *Signer
 }
 
@@ -39,22 +42,28 @@ func NewClient(accessKeyId, secretAccessKey, region string) *Client {
 	return client
 }
 
-func (c *Client) GetRecords(ctx context.Context, zone string) ([]RecordSet, error) {
-	zoneId, err := c.getZoneId(ctx, zone)
-	if err != nil {
-		return nil, err
-	}
+func (c *Client) getZoneId(ctx context.Context, zone string) (string, error) {
+    url := c.getBaseURL()
+    url = url.JoinPath("zones")
+    query := url.Query()
+    query.Set("name", zone)
+    if c.ZoneType != "" {
+        query.Set("type", c.ZoneType)
+    }
+    url.RawQuery = query.Encode()
 
-	url := c.getBaseURL()
-	url = url.JoinPath("zones", zoneId, "recordsets")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
-
-	resp := new(ListRecordsResponse)
-	if err = c.doAPIRequest(req, resp); err != nil {
-		return nil, err
-	}
-
-	return resp.RecordSets, nil
+    req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
+    if err != nil {
+        return "", err
+    }
+    resp := new(ListZonesResponse)
+    if err = c.doAPIRequest(req, resp); err != nil {
+        return "", err
+    }
+    if len(resp.Zones) == 0 {
+        return "", fmt.Errorf("zone %s not found (type: %s)", zone, c.ZoneType)
+    }
+    return resp.Zones[0].ID, nil
 }
 
 func (c *Client) AppendRecord(ctx context.Context, zone string, record RecordSet) (*RecordSet, error) {
